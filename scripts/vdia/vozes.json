@@ -1,0 +1,106 @@
+{
+  "_leia": "Catálogo de vozes LOCAIS em pt-BR. 'arquivos' são baixados por `vdia instalar` para VDIA_MODELOS (nunca para dentro da skill). sha256 conferido no download e em `vdia instalar --verificar`.",
+  "vozes": [
+    {
+      "id": "piper-faber",
+      "motor": "piper",
+      "nome": "Piper pt_BR faber (masculina)",
+      "modelo": "pt_BR-faber-medium.onnx",
+      "voz": null,
+      "arquivos": [
+        {
+          "nome": "pt_BR-faber-medium.onnx",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx",
+          "sha256": "75e913eb463db0b6ac7ddf68d3e4c9ac19ace36dc3b710a81039b448352b8ffc"
+        },
+        {
+          "nome": "pt_BR-faber-medium.onnx.json",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json",
+          "sha256": "6b6801319e5a70aa4d75c63343515f55d1cd671ecd1ac511586bc16216812261"
+        }
+      ],
+      "licenca": "Motor piper-tts GPL-3.0-or-later; repositório rhasspy/piper-voices MIT; dados de treino CC0 segundo o MODEL_CARD da voz (confira o MODEL_CARD antes de uso comercial).",
+      "nota": "Padrão recomendado: rápida em CPU (cerca de 5x mais rápida que o tempo real), estável em textos longos; prosódia um pouco sintética. A calibração acha a escala do ritmo escolhido."
+    },
+    {
+      "id": "piper-cadu",
+      "motor": "piper",
+      "nome": "Piper pt_BR cadu (masculina)",
+      "modelo": "pt_BR-cadu-medium.onnx",
+      "voz": null,
+      "arquivos": [
+        {
+          "nome": "pt_BR-cadu-medium.onnx",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx",
+          "sha256": "d5a662e3f606d5a49dd29ba9ce90c304ae45dd9543f8b0c773bcb0de282499de"
+        },
+        {
+          "nome": "pt_BR-cadu-medium.onnx.json",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx.json",
+          "sha256": "28c27ae86debf5e304176c5be533bbb3a483e456f42272eeb7dbfede48dae741"
+        }
+      ],
+      "licenca": "Motor piper-tts GPL-3.0-or-later; repositório rhasspy/piper-voices MIT; dados de treino CC0 segundo o MODEL_CARD da voz (confira o MODEL_CARD antes de uso comercial).",
+      "nota": "Tão rápida quanto a faber; fala naturalmente mais devagar (o vídeo fica mais longo para o mesmo texto). A calibração corrige o ritmo."
+    },
+    {
+      "id": "kokoro-alex",
+      "motor": "kokoro",
+      "nome": "Kokoro pm_alex (masculina)",
+      "modelo": "kokoro-v1.0.onnx",
+      "voz": "pm_alex",
+      "arquivos": [
+        {
+          "nome": "kokoro-v1.0.onnx",
+          "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx",
+          "sha256": "7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5"
+        },
+        {
+          "nome": "voices-v1.0.bin",
+          "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin",
+          "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
+        }
+      ],
+      "licenca": "Pesos Kokoro-82M Apache-2.0 (hexgrad/Kokoro-82M no Hugging Face); pacote kokoro-onnx MIT; arquivos ONNX publicados nos releases do kokoro-onnx.",
+      "nota": "Mais natural em siglas sem ajuda do dicionário; cerca de 10x mais lenta que a Piper em CPU. Fonemização por espeak-ng (embutido no pacote)."
+    },
+    {
+      "id": "kokoro-dora",
+      "motor": "kokoro",
+      "nome": "Kokoro pf_dora (feminina)",
+      "modelo": "kokoro-v1.0.onnx",
+      "voz": "pf_dora",
+      "arquivos": [
+        {
+          "nome": "kokoro-v1.0.onnx",
+          "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx",
+          "sha256": "7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5"
+        },
+        {
+          "nome": "voices-v1.0.bin",
+          "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin",
+          "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
+        }
+      ],
+      "licenca": "Pesos Kokoro-82M Apache-2.0 (hexgrad/Kokoro-82M no Hugging Face); pacote kokoro-onnx MIT; arquivos ONNX publicados nos releases do kokoro-onnx.",
+      "nota": "Única voz feminina local do catálogo; mesmo modelo da pm_alex (o download é um só)."
+    }
+  ],
+  "nuvem": {
+    "_leia": "DESLIGADO. Só com aprovação explícita do usuário (o texto do roteiro sai da máquina). Ver references/seguranca.md.",
+    "exemplos": [
+      {
+        "id": "edge-francisca",
+        "motor": "edge-tts",
+        "voz": "pt-BR-FranciscaNeural",
+        "licenca": "edge-tts LGPL-3.0; usa endpoint não oficial do recurso Ler em Voz Alta do Edge (termos e estabilidade não garantidos)."
+      },
+      {
+        "id": "edge-antonio",
+        "motor": "edge-tts",
+        "voz": "pt-BR-AntonioNeural",
+        "licenca": "edge-tts LGPL-3.0; usa endpoint não oficial do recurso Ler em Voz Alta do Edge (termos e estabilidade não garantidos)."
+      }
+    ]
+  }
+}

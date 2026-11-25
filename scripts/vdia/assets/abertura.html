@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Abertura</title>
+<!-- Abertura animada do vídeo único. Tudo local: sem CDN, sem rede, só fontes do sistema.
+     Parâmetros no hash (JSON): {visual, n, total, nome, titulo, kicker, marca, chips, dur, fi, ff, tema}
+     visual = ondas | grade | particulas | aneis; tema = {fundo, primaria, acento, texto, fonte}.
+     fi/ff = início/fim da fala do nome (s, desde tocar()); dur = duração da cena (s).
+     Antes de tocar() a página fica BRANCA: é a marca para cortar o início da gravação (o fundo do tema
+     não pode ser branco puro). -->
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #fff; }
+  #palco { position: absolute; inset: 0; visibility: hidden; }
+  body.tocando #palco { visibility: visible; }
+  canvas { position: absolute; inset: 0; }
+  #marca { position: absolute; left: 140px; top: 92px; font-size: 26px; letter-spacing: 9px; font-weight: 600; opacity: .8; }
+  #contador { position: absolute; right: 140px; top: 88px; text-align: right; font-size: 24px; letter-spacing: 4px; opacity: .8; }
+  #pontos { margin-top: 14px; display: flex; gap: 12px; justify-content: flex-end; }
+  #pontos i { width: 34px; height: 5px; border-radius: 3px; display: block; opacity: .25; }
+  #pontos i.feito { opacity: .7; }
+  #pontos i.atual { opacity: 1; }
+  #bloco { position: absolute; left: 140px; top: 50%; transform: translateY(-50%); width: 1500px; }
+  #kicker { font-size: 30px; letter-spacing: 8px; font-weight: 600; text-transform: uppercase; margin-bottom: 18px; }
+  #nome { font-weight: 800; line-height: 1.04; letter-spacing: -2px; font-size: 140px; }
+  #nome span { display: inline-block; }
+  #barra { height: 6px; width: 0; margin: 34px 0 30px; border-radius: 3px; }
+  #titulo { max-width: 1100px; font-size: 50px; font-weight: 350; line-height: 1.2; opacity: .9; }
+  #chips { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 40px; }
+  #chips div { padding: 12px 24px; border-radius: 30px; font-size: 26px; border: 1.5px solid; }
+</style>
+</head>
+<body>
+<div id="palco">
+  <canvas id="fundo" width="1920" height="1080"></canvas>
+  <div id="marca"></div>
+  <div id="contador"><div id="ctexto"></div><div id="pontos"></div></div>
+  <div id="bloco">
+    <div id="kicker"></div>
+    <div id="nome"></div>
+    <div id="barra"></div>
+    <div id="titulo"></div>
+    <div id="chips"></div>
+  </div>
+</div>
+<script>
+const P = JSON.parse(decodeURIComponent(location.hash.slice(1) || "{}"));
+const T = Object.assign({fundo: "#0b1220", primaria: "#4f8cff", acento: "#f5b942", texto: "#eef3ff",
+                         fonte: "Segoe UI, Arial, sans-serif"}, P.tema || {});
+const $ = (id) => document.getElementById(id);
+const palco = $("palco");
+palco.style.fontFamily = T.fonte;
+palco.style.color = T.texto;
+$("kicker").style.color = T.primaria;
+$("barra").style.background = `linear-gradient(90deg, ${T.acento}, ${T.primaria})`;
+$("marca").textContent = P.marca || "";
+$("kicker").textContent = P.kicker || "";
+$("titulo").textContent = P.titulo || "";
+const nome = P.nome || "";
+$("nome").innerHTML = [...nome].map(c => `<span>${c === " " ? "&nbsp;" : c.replace(/[<>&]/g, "")}</span>`).join("");
+if (nome.length > 14) $("nome").style.fontSize = Math.max(64, 140 * 14 / nome.length) + "px";
+if (P.total) {
+  $("ctexto").textContent = `${P.n} / ${P.total}`;
+  for (let i = 1; i <= P.total; i++) {
+    const el = document.createElement("i");
+    el.style.background = i === P.n ? T.acento : T.primaria;
+    el.className = i < P.n ? "feito" : (i === P.n ? "atual" : "");
+    $("pontos").appendChild(el);
+  }
+}
+for (const c of (P.chips || [])) {
+  const d = document.createElement("div");
+  d.textContent = c; d.style.borderColor = T.primaria; d.style.opacity = 0;
+  $("chips").appendChild(d);
+}
+
+const cv = $("fundo"), g = cv.getContext("2d");
+const W = 1920, H = 1080;
+let semente = 7;
+const rnd = () => (semente = (semente * 16807) % 2147483647) / 2147483647;
+const parts = Array.from({length: 140}, () => ({x: rnd() * W, y: rnd() * H, r: 1 + rnd() * 3, v: .2 + rnd()}));
+const ease = (x) => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3);
+
+function fundo(t) {
+  g.fillStyle = T.fundo; g.fillRect(0, 0, W, H);
+  g.globalAlpha = 1;
+  const v = P.visual || "ondas";
+  if (v === "ondas") {
+    for (let k = 0; k < 6; k++) {
+      g.beginPath();
+      g.strokeStyle = k % 2 ? T.primaria : T.acento; g.globalAlpha = .10 + k * .03; g.lineWidth = 2;
+      for (let x = 0; x <= W; x += 12) {
+        const y = H * .62 + k * 34 + Math.sin(x / 210 + t * (0.8 + k * .15) + k) * (40 + k * 8);
+        x ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.stroke();
+    }
+  } else if (v === "grade") {
+    g.strokeStyle = T.primaria; g.lineWidth = 1;
+    const passo = 80, d = (t * 30) % passo;
+    for (let x = -passo; x < W + passo; x += passo) { g.globalAlpha = .10; g.beginPath(); g.moveTo(x + d, 0); g.lineTo(x + d, H); g.stroke(); }
+    for (let y = -passo; y < H + passo; y += passo) { g.globalAlpha = .10; g.beginPath(); g.moveTo(0, y + d); g.lineTo(W, y + d); g.stroke(); }
+    g.globalAlpha = .5; g.fillStyle = T.acento;
+    for (let i = 0; i < 12; i++) { const x = ((i * 397) % 23) * passo + d, y = ((i * 211) % 13) * passo + d; g.fillRect(x - 3, y - 3, 6, 6); }
+  } else if (v === "particulas") {
+    for (const p of parts) {
+      const y = (p.y - t * 40 * p.v + H) % H;
+      g.globalAlpha = .25 + .35 * p.v; g.fillStyle = p.v > .9 ? T.acento : T.primaria;
+      g.beginPath(); g.arc(p.x, y, p.r, 0, Math.PI * 2); g.fill();
+    }
+  } else {
+    const cx = W * .76, cy = H * .5;
+    for (let k = 0; k < 7; k++) {
+      const r = ((t * 90 + k * 110) % 770);
+      g.globalAlpha = Math.max(0, .35 - r / 2200); g.strokeStyle = k % 3 ? T.primaria : T.acento; g.lineWidth = 3;
+      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+    }
+  }
+  g.globalAlpha = 1;
+}
+
+function quadro(t) {
+  fundo(t);
+  const dur = P.dur || 4, fi = P.fi ?? .5;
+  const spans = $("nome").children;
+  for (let i = 0; i < spans.length; i++) {
+    const e = ease((t - fi + .35 - i * .025) / .45);
+    spans[i].style.opacity = e; spans[i].style.transform = `translateY(${(1 - e) * 40}px)`;
+  }
+  $("kicker").style.opacity = ease((t - .15) / .5);
+  $("barra").style.width = 520 * ease((t - fi) / .8) + "px";
+  $("titulo").style.opacity = ease((t - fi - .25) / .6);
+  [...$("chips").children].forEach((c, i) => c.style.opacity = ease((t - .8 - i * .08) / .4));
+  const saida = ease((t - (dur - .45)) / .45);
+  $("bloco").style.opacity = 1 - saida * .3;
+}
+
+window.__pronto = true;
+window.tocar = () => {
+  document.body.classList.add("tocando");
+  const t0 = performance.now(), dur = (P.dur || 4) + .3;
+  function passo() {
+    const t = (performance.now() - t0) / 1000;
+    quadro(t);
+    if (t < dur) requestAnimationFrame(passo); else window.__fim = true;
+  }
+  quadro(0);
+  requestAnimationFrame(passo);
+};
+</script>
+</body>
+</html>

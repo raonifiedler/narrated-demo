@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR"><meta charset="utf-8"><title>Tarefas (exemplo)</title>
+<!-- App de tarefas fictício para testar a rota web, sem rede. -->
+<style>body{font:18px system-ui,sans-serif;margin:40px}li{padding:8px}.feita{text-decoration:line-through;color:#888}
+input{font-size:18px;padding:6px}button{font-size:18px;padding:6px 14px}</style>
+<h1>Tarefas da semana</h1>
+<input id="nova" placeholder="Nova tarefa"> <button id="adicionar">Adicionar</button>
+<ul id="lista"><li>Revisar o relatório</li><li>Enviar o orçamento</li><li>Marcar a reunião</li></ul>
+<script>
+document.getElementById("adicionar").onclick = () => {
+  const v = document.getElementById("nova").value.trim();
+  if (v) { const li = document.createElement("li"); li.textContent = v; document.getElementById("lista").appendChild(li); }
+  document.getElementById("nova").value = "";
+};
+document.getElementById("lista").onclick = (e) => { if (e.target.tagName === "LI") e.target.classList.toggle("feita"); };
+</script>
+</html>

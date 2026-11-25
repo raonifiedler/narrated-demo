@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+modelos/
+*.onnx
+*.bin
+*.wav
+*.mp4
+*.webm
+fonetica/sugestoes/

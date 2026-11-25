@@ -1,0 +1,7 @@
+{
+  "_leia": "Texto escrito (legenda) -> como a voz deve falar. Palavra inteira, a mais longa primeiro, sensível a maiúsculas. Chaves com '_' são comentários. Este é o modelo: cada área de trabalho recebe a sua cópia em <area>/fonetica/dicionario.json.",
+  "_exemplo": {
+    "Kubernetes": "Cubernêtis",
+    "_como": "Entradas reais ficam no nível de cima, assim: \"Kubernetes\": \"Cubernêtis\". Escolha a grafia ouvindo as opções de `vdia fonetica sugerir`."
+  }
+}
