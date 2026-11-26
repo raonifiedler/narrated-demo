@@ -21,7 +21,29 @@ ASSETS = Path(__file__).resolve().parent / "assets"
 VOZES_JSON = Path(__file__).resolve().parent / "vozes.json"
 DICIONARIO_MODELO = SKILL / "fonetica" / "dicionario.json"
 
-LARG, ALT, FPS = 1920, 1080, 30
+FPS = 30
+
+# Formato do quadro. "retrato" = celular em pé (1080 x 1920). `config.LARG` e `config.ALT` valem para o
+# projeto lido por último (`ler_projeto` chama `aplicar_formato`) e são lidos na hora do uso, pelo
+# __getattr__ do módulo (PEP 562): não são constantes, e paisagem é o padrão.
+Formato = Literal["paisagem", "retrato"]
+DIMENSOES: dict[str, tuple[int, int]] = {"paisagem": (1920, 1080), "retrato": (1080, 1920)}
+_quadro: dict[str, int] = {"LARG": 1920, "ALT": 1080}
+
+
+def aplicar_formato(formato: str) -> tuple[int, int]:
+    if formato not in DIMENSOES:
+        raise ErroConfig(f"formato '{formato}' inválido: use {', '.join(DIMENSOES)}")
+    larg, alt = DIMENSOES[formato]
+    _quadro["LARG"], _quadro["ALT"] = larg, alt
+    return larg, alt
+
+
+def __getattr__(nome: str) -> int:
+    if nome in _quadro:
+        return _quadro[nome]
+    raise AttributeError(f"module 'vdia.config' has no attribute '{nome}'")
+
 
 ModoLegenda = Literal["nenhuma", "faixa", "queimada", "arquivo"]
 PASTAS_PROJETO = ("roteiro", "scripts", "material", "cenas", "montagem", "final")
@@ -48,7 +70,7 @@ def pasta_fonetica() -> Path:
 
 
 def dicionario_path() -> Path:
-    """Dicionário da área de trabalho; nasce da cópia do modelo da skill (vazio, com um exemplo comentado)."""
+    """Dicionário da área de trabalho; nasce da cópia do modelo da skill (entradas escolhidas + exemplo)."""
     p = pasta_fonetica() / "dicionario.json"
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -94,6 +116,8 @@ class Voz(BaseModel):
 class Legenda(BaseModel):
     model_config = ConfigDict(extra="forbid")
     modo: ModoLegenda = "faixa"
+    # tamanho máximo de cada bloco de legenda; None = 64 no retrato e 90 na paisagem (duas linhas)
+    max_caracteres: int | None = Field(default=None, ge=20, le=200)
     # estilo ASS do modo `queimada` (letra grande, contorno, faixa inferior)
     estilo: str = (
         "FontName=Arial,FontSize=13,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
@@ -135,6 +159,7 @@ class Projeto(BaseModel):
     nome: str
     titulo: str = ""
     criado_em: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    formato: Formato = "paisagem"
     voz: Voz = Field(default_factory=Voz)
     legenda: Legenda = Field(default_factory=Legenda)
     montagem: Montagem = Field(default_factory=Montagem)
@@ -159,7 +184,9 @@ def achar_projeto(ref: str | None) -> Path:
 def ler_projeto(pasta: Path) -> Projeto:
     arq = pasta / "projeto.json"
     try:
-        return Projeto.model_validate_json(arq.read_text(encoding="utf-8"))
+        proj = Projeto.model_validate_json(arq.read_text(encoding="utf-8"))
+        aplicar_formato(proj.formato)
+        return proj
     except FileNotFoundError as e:
         raise ErroConfig(f"falta {arq}") from e
     except ValidationError as e:

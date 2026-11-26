@@ -69,7 +69,8 @@ quando o tempo for curto.
 
 ### 6. Montagem
 `vdia montar [--legenda faixa|queimada|arquivo|nenhuma]`: a fala manda no tempo; o clipe acelera até 2× ou
-desacelera até 1,4× e depois congela; xfade entre cenas; 1920x1080, 30 fps, H.264 + AAC.
+desacelera até 1,4× e depois congela; xfade entre cenas; 1920x1080 (ou 1080x1920 com `formato: retrato`, criado por
+`vdia novo <nome> --formato retrato`, para celular em pé), 30 fps, H.264 + AAC.
 Recorte/zoom de uma cena densa: `montagem/recortes.json` (`{"2": [x, y, largura]}`).
 
 ### 7. QA em ciclo até zerar

@@ -38,7 +38,7 @@ def _amostra_arq() -> Path:
 
 # ── comandos ────────────────────────────────────────────────────────────────────────────────
 def c_novo(a: argparse.Namespace) -> None:
-    p = projeto.novo(a.nome, a.titulo, a.rota)
+    p = projeto.novo(a.nome, a.titulo, a.rota, a.formato)
     print(f"projeto criado: {p}\npróximo passo: briefing e roteiro em {p / 'roteiro' / 'ROTEIRO.md'}")
 
 
@@ -200,6 +200,12 @@ def c_legenda_whisper(a: argparse.Namespace) -> None:
 
 
 def c_imagem(a: argparse.Namespace) -> None:
+    # o quadro (paisagem ou retrato) vem do projeto: o --projeto dado, ou o da pasta atual se houver
+    try:
+        config.ler_projeto(config.achar_projeto(a.projeto))
+    except config.ErroConfig:
+        if a.projeto:
+            raise
     fx, fy = (float(x) for x in a.foco.split(","))
     print(imagens.zoom_lento(Path(a.imagem), Path(a.destino), a.duracao, a.zoom, (fx, fy)))
 
@@ -227,6 +233,8 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("nome")
     s.add_argument("--titulo")
     s.add_argument("--rota", choices=["web", "desktop", "offscreen", "imagens"], default="web")
+    s.add_argument("--formato", choices=["paisagem", "retrato"], default="paisagem",
+                   help="retrato = 1080x1920, celular em pé")
     s.set_defaults(f=c_novo)
 
     s = sub.add_parser("instalar", help="baixa os modelos de voz (sha256 conferido)")
@@ -303,6 +311,7 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--duracao", type=float, default=6.0)
     s.add_argument("--zoom", type=float, default=1.15)
     s.add_argument("--foco", default="0.5,0.5")
+    s.add_argument("--projeto", help="projeto cujo formato (paisagem/retrato) define o quadro")
     s.set_defaults(f=c_imagem)
 
     s = sub.add_parser("unico", help="vídeo único com aberturas (unico.json no projeto)")

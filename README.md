@@ -62,7 +62,7 @@ vdia montar --projeto app-tarefas --legenda faixa                            # 5
 
 | Comando | Exemplo | Faz |
 | --- | --- | --- |
-| `novo <nome>` | `vdia novo app-tarefas --titulo "App de tarefas" --rota web` | cria `projeto.json`, `roteiro/`, `scripts/`, `material/`, `cenas/`, `montagem/`, `final/` |
+| `novo <nome>` | `vdia novo app-tarefas --titulo "App de tarefas" --rota web` | cria `projeto.json`, `roteiro/`, `scripts/`, `material/`, `cenas/`, `montagem/`, `final/`; `--formato retrato` = 1080x1920 (celular em pé) |
 | `instalar [ids]` | `vdia instalar piper-faber` / `vdia instalar --verificar` | baixa os modelos (https, sha256) ou só confere |
 | `voz lista` | `vdia voz lista` | catálogo com licença e nota |
 | `voz amostra` | `vdia voz amostra --frase "Olá, este é o app."` | `vozes/amostra-vozes.wav`: "Voz 1… Voz 2…" |
@@ -108,7 +108,7 @@ TTS em nuvem (ex.: edge-tts) é **opcional e fica desligado**: o texto do roteir
 
 ## Fonética: sugerir e fixar
 
-- O dicionário fica em `<área>/fonetica/dicionario.json` (nasce do modelo da skill, vazio).
+- O dicionário fica em `<área>/fonetica/dicionario.json` (nasce do modelo da skill, `fonetica/dicionario.json`: ponha lá os termos que valem para todos os seus vídeos).
 - Aplicado em **toda** síntese: palavra inteira, a mais longa primeiro, sensível a maiúsculas.
 - A **legenda usa sempre o texto escrito**; só a voz recebe a grafia fonética.
 - `sugerir` sem `--opcoes` gera candidatas por heurística: a palavra como está, sigla soletrada

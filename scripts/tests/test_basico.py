@@ -23,11 +23,33 @@ def test_novo_cria_estrutura(area: Path) -> None:
     assert (p / "roteiro" / "ROTEIRO.md").exists()
     assert (p / "scripts" / "gravar.py").exists()
     assert (area / "fonetica" / "dicionario.json").exists()
-    assert pronuncia.ler() == {}  # o modelo só tem comentários
+    # a área nasce com as entradas do dicionário-modelo da skill (sem os comentários)
+    assert pronuncia.ler() == pronuncia.ler(config.DICIONARIO_MODELO)
+    assert "_leia" not in pronuncia.ler()
     with pytest.raises(projeto.ErroProjeto):
         projeto.novo("app-tarefas")
     with pytest.raises(projeto.ErroProjeto):
         projeto.novo("Nome Ruim")
+
+
+def test_formato_retrato(area: Path) -> None:
+    p = projeto.novo("celular", "Celular", formato="retrato")
+    proj = config.ler_projeto(p)
+    assert proj.formato == "retrato"
+    assert (config.LARG, config.ALT) == (1080, 1920)
+    q = projeto.novo("tela", "Tela")
+    assert config.ler_projeto(q).formato == "paisagem"
+    assert (config.LARG, config.ALT) == (1920, 1080)
+    with pytest.raises(config.ErroConfig):
+        config.aplicar_formato("quadrado")
+
+
+def testnome_seguro_sem_colisao() -> None:
+    from vdia.fonetica import nome_seguro
+
+    termos = ["%", "&", "#", "\\BEL", "\\BEL+", "\\BEL-", "BEL", "Kubernetes", "dados.txt", "Nº"]
+    assert len({nome_seguro(t) for t in termos}) == len(termos)
+    assert nome_seguro("Kubernetes") == "Kubernetes"
 
 
 def test_dicionario_regras() -> None:
@@ -36,6 +58,9 @@ def test_dicionario_regras() -> None:
     assert pronuncia.aplicar("a web e a Web, não WEB", dic) == "a uébi e a Uébi, não WEB"
     assert pronuncia.aplicar("webinar e web-app", dic) == "webinar e web-app"  # só palavra inteira
     assert pronuncia.variantes_caixa("Web", "uébi") == {"WEB": "uébi", "Web": "uébi", "web": "uébi"}
+    # "_leia" é comentário; o símbolo "_" sozinho é termo de verdade
+    assert pronuncia.eh_comentario("_leia") and not pronuncia.eh_comentario("_")
+    assert pronuncia.aplicar("Para &, _ e $.", {"_": "sublinhado"}) == "Para &, sublinhado e $."
 
 
 def test_ritmos() -> None:
@@ -64,6 +89,10 @@ def test_faltantes() -> None:
     falta = fonetica.faltantes(textos, {"CSV": "cê ésse vê"})
     assert "Kubernetes" in falta and "API" in falta and "REST" in falta and "GitHub" in falta
     assert "CSV" not in falta and "painel" not in falta and "Exporta" not in falta
+    # pedaço de termo composto que está no dicionário não é faltante
+    compostos = {"\\BEL+": "barra bél mais", "SIGN/imagens": "sáin barra imagens"}
+    assert fonetica.faltantes(["Incluir é \\BEL+, na pasta SIGN/imagens."], compostos) == []
+    assert fonetica.faltantes(["Incluir é \\BEL+."], {}) == ["BEL+"]
 
 
 def test_roteiro_ler(tmp_path: Path) -> None:

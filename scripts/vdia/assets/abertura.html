@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <title>Abertura</title>
 <!-- Abertura animada do vídeo único. Tudo local: sem CDN, sem rede, só fontes do sistema.
-     Parâmetros no hash (JSON): {visual, n, total, nome, titulo, kicker, marca, chips, dur, fi, ff, tema}
+     Parâmetros no hash (JSON): {visual, n, total, nome, titulo, kicker, marca, chips, dur, fi, ff, tema, w, h}
+     w x h = quadro (1920x1080 paisagem; 1080x1920 retrato, celular em pé: layout próprio, classe .retrato).
      visual = ondas | grade | particulas | aneis; tema = {fundo, primaria, acento, texto, fonte}.
      fi/ff = início/fim da fala do nome (s, desde tocar()); dur = duração da cena (s).
+     fn = quando o nome aparece (s); ausente = junto com a fala (fi).
      Antes de tocar() a página fica BRANCA: é a marca para cortar o início da gravação (o fundo do tema
      não pode ser branco puro). -->
 <style>
@@ -28,6 +30,16 @@
   #titulo { max-width: 1100px; font-size: 50px; font-weight: 350; line-height: 1.2; opacity: .9; }
   #chips { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 40px; }
   #chips div { padding: 12px 24px; border-radius: 30px; font-size: 26px; border: 1.5px solid; }
+  /* retrato (celular em pé): margens menores, bloco em coluna, letra proporcional à largura */
+  .retrato #marca { left: 80px; top: 120px; font-size: 30px; letter-spacing: 7px; }
+  .retrato #contador { right: 80px; top: 114px; font-size: 28px; }
+  .retrato #bloco { left: 80px; width: 920px; top: 44%; }
+  .retrato #kicker { font-size: 34px; letter-spacing: 7px; margin-bottom: 24px; }
+  .retrato #nome { font-size: 120px; letter-spacing: -1px; }
+  .retrato #barra { height: 8px; margin: 44px 0 40px; }
+  .retrato #titulo { max-width: 920px; font-size: 58px; line-height: 1.22; }
+  .retrato #chips { margin-top: 56px; gap: 18px; }
+  .retrato #chips div { font-size: 32px; padding: 14px 26px; }
 </style>
 </head>
 <body>
@@ -45,6 +57,10 @@
 </div>
 <script>
 const P = JSON.parse(decodeURIComponent(location.hash.slice(1) || "{}"));
+const W = P.w || 1920, H = P.h || 1080, RETRATO = H > W;
+document.documentElement.style.width = document.body.style.width = W + "px";
+document.documentElement.style.height = document.body.style.height = H + "px";
+if (RETRATO) document.body.classList.add("retrato");
 const T = Object.assign({fundo: "#0b1220", primaria: "#4f8cff", acento: "#f5b942", texto: "#eef3ff",
                          fonte: "Segoe UI, Arial, sans-serif"}, P.tema || {});
 const $ = (id) => document.getElementById(id);
@@ -58,7 +74,12 @@ $("kicker").textContent = P.kicker || "";
 $("titulo").textContent = P.titulo || "";
 const nome = P.nome || "";
 $("nome").innerHTML = [...nome].map(c => `<span>${c === " " ? "&nbsp;" : c.replace(/[<>&]/g, "")}</span>`).join("");
-if (nome.length > 14) $("nome").style.fontSize = Math.max(64, 140 * 14 / nome.length) + "px";
+const BASE = RETRATO ? 120 : 140, CABE = RETRATO ? 12 : 14;
+if (nome.length > CABE && !RETRATO) $("nome").style.fontSize = Math.max(64, BASE * CABE / nome.length) + "px";
+// no retrato o nome quebra em linhas (palavras inteiras); só encolhe se uma palavra sozinha não couber
+if (RETRATO) { const maior = Math.max(...nome.split(" ").map(p => p.length));
+  if (maior > CABE) $("nome").style.fontSize = Math.max(72, BASE * CABE / maior) + "px";
+  $("nome").innerHTML = nome.split(" ").map(p => `<span style="white-space:nowrap">${[...p].map(c => `<span>${c.replace(/[<>&]/g, "")}</span>`).join("")}</span>`).join(" "); }
 if (P.total) {
   $("ctexto").textContent = `${P.n} / ${P.total}`;
   for (let i = 1; i <= P.total; i++) {
@@ -75,7 +96,7 @@ for (const c of (P.chips || [])) {
 }
 
 const cv = $("fundo"), g = cv.getContext("2d");
-const W = 1920, H = 1080;
+cv.width = W; cv.height = H;
 let semente = 7;
 const rnd = () => (semente = (semente * 16807) % 2147483647) / 2147483647;
 const parts = Array.from({length: 140}, () => ({x: rnd() * W, y: rnd() * H, r: 1 + rnd() * 3, v: .2 + rnd()}));
@@ -109,7 +130,7 @@ function fundo(t) {
       g.beginPath(); g.arc(p.x, y, p.r, 0, Math.PI * 2); g.fill();
     }
   } else {
-    const cx = W * .76, cy = H * .5;
+    const cx = RETRATO ? W * .5 : W * .76, cy = RETRATO ? H * .78 : H * .5;
     for (let k = 0; k < 7; k++) {
       const r = ((t * 90 + k * 110) % 770);
       g.globalAlpha = Math.max(0, .35 - r / 2200); g.strokeStyle = k % 3 ? T.primaria : T.acento; g.lineWidth = 3;
@@ -121,15 +142,15 @@ function fundo(t) {
 
 function quadro(t) {
   fundo(t);
-  const dur = P.dur || 4, fi = P.fi ?? .5;
+  const dur = P.dur || 4, fi = P.fi ?? .5, fn = P.fn ?? fi;
   const spans = $("nome").children;
   for (let i = 0; i < spans.length; i++) {
-    const e = ease((t - fi + .35 - i * .025) / .45);
+    const e = ease((t - fn + .35 - i * .025) / .45);
     spans[i].style.opacity = e; spans[i].style.transform = `translateY(${(1 - e) * 40}px)`;
   }
   $("kicker").style.opacity = ease((t - .15) / .5);
-  $("barra").style.width = 520 * ease((t - fi) / .8) + "px";
-  $("titulo").style.opacity = ease((t - fi - .25) / .6);
+  $("barra").style.width = (RETRATO ? 600 : 520) * ease((t - fn) / .8) + "px";
+  $("titulo").style.opacity = ease((t - fn - .25) / .6);
   [...$("chips").children].forEach((c, i) => c.style.opacity = ease((t - .8 - i * .08) / .4));
   const saida = ease((t - (dur - .45)) / .45);
   $("bloco").style.opacity = 1 - saida * .3;

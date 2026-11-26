@@ -14,6 +14,7 @@ Saída: 1920x1080, 30 fps, H.264 + AAC; legenda conforme o modo (nenhuma | faixa
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -25,7 +26,7 @@ class Clipe:
     nome: str
     texto: str  # fala ESCRITA: vira a legenda; a voz recebe o texto com o dicionário aplicado
     transicao: str = "fade"
-    recorte: tuple[int, int, int] | None = None  # (x, y, largura) no quadro do bruto; altura = largura * 9/16
+    recorte: tuple[int, int, int] | None = None  # (x, y, largura) no quadro do bruto; altura na proporção do quadro
 
 
 @dataclass
@@ -74,7 +75,7 @@ def ajustar(
     pre = ""
     if recorte:
         x, y, w = recorte
-        h = round(w * 9 / 16)
+        h = round(w * config.ALT / config.LARG)  # mesma proporção do quadro (paisagem ou retrato)
         pre = f"crop={w}:{h}:{x}:{y},scale={config.LARG}:{config.ALT}:flags=lanczos,"
     vf = (
         f"{pre}setpts=PTS/{acel:.4f},fps={config.FPS},"
@@ -122,6 +123,37 @@ def avisos(nome: str, aj: Ajuste, m: config.Montagem, palavras_por_s: float) -> 
             f"{nome}: {aj.congelado_s:.1f} s de imagem parada; acrescente ação ou encurte a fala "
             f"(~{round(aj.congelado_s * palavras_por_s)} palavras)"
         )
+    return saida
+
+
+def dividir_legenda(inicio: float, dur: float, texto: str, limite: int) -> list[tuple[float, float, str]]:
+    """Quebra a fala em blocos de até `limite` caracteres (frase; se a frase for longa, grupos de palavras),
+    com o tempo de cada bloco proporcional ao número de caracteres. Uma fala inteira numa legenda só cobria
+    um terço da tela no formato retrato."""
+    frases = [f for f in re.split(r"(?<=[.!?:;])\s+", texto.strip()) if f]
+    blocos: list[str] = []
+    for f in frases:
+        if len(f) <= limite:
+            blocos.append(f)
+            continue
+        palavras, atual = f.split(), ""
+        n_partes = -(-len(f) // limite)
+        alvo = len(f) / n_partes
+        for p in palavras:
+            if atual and len(atual) + 1 + len(p) > alvo * 1.15:
+                blocos.append(atual)
+                atual = p
+            else:
+                atual = f"{atual} {p}".strip()
+        if atual:
+            blocos.append(atual)
+    total = sum(len(b) for b in blocos) or 1
+    saida: list[tuple[float, float, str]] = []
+    t = inicio
+    for b in blocos:
+        d = dur * len(b) / total
+        saida.append((t, t + d, b))
+        t += d
     return saida
 
 
@@ -200,7 +232,9 @@ def montar(clipes: list[Clipe], brutos: list[Path], proj: config.Projeto, out: P
     fil.append("".join(f"[a{i}]" for i in range(n)) + f"amix=inputs={n}:normalize=0,apad[aud]")
 
     srt = out / f"{nome}.srt"
-    midia.escrever_srt([(inicio[i], inicio[i] + durs[i], c.texto) for i, c in enumerate(clipes)], srt)
+    limite = proj.legenda.max_caracteres or (64 if config.ALT > config.LARG else 90)
+    cues = [q for i, c in enumerate(clipes) for q in dividir_legenda(inicio[i], durs[i], c.texto, limite)]
+    midia.escrever_srt(cues, srt)
     if modo == "queimada":
         estilo = proj.legenda.estilo.replace("'", "")
         fil.append(f"{ult}subtitles={srt.name}:force_style='{estilo}'[vq]")
