@@ -54,7 +54,7 @@ O áudio é sintetizado primeiro e o vídeo se ajusta a ele:
 - Transcrição automática (Whisper) é só indício.
 
 ## R8. Entrega
-- Um MP4 por vídeo: 1920×1080, 30 fps, H.264 + AAC; legenda conforme o modo (`nenhuma`, `faixa`, `queimada`, `arquivo`).
+- Um MP4 por vídeo: 1920×1080 (paisagem) ou 1080×1920 (`formato: retrato`, celular em pé), 30 fps, H.264 + AAC; legenda conforme o modo (`nenhuma`, `faixa`, `queimada`, `arquivo`).
 - Confira a soma das durações contra o teto combinado com o usuário.
 - Vídeo único (opcional): cartela inicial, uma abertura por parte com o nome falado e pausa intencional antes e
   depois, transições variadas com crossfade de áudio, fecho; o QA ignora as pausas das aberturas; a legenda das

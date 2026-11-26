@@ -52,11 +52,12 @@ def zoom_script(zoom: float) -> str:
 
 
 @contextmanager
-def navegador(zoom_css: float = 1.0, largura: int = config.LARG, altura: int = config.ALT) -> Generator[Page]:
+def navegador(zoom_css: float = 1.0, largura: int | None = None, altura: int | None = None) -> Generator[Page]:
+    """Sem largura/altura, usa o quadro do formato do projeto (config.LARG x config.ALT, lido na hora)."""
     with sync_playwright() as pw:
         nav = pw.chromium.launch()
         try:
-            ctx = nav.new_context(viewport={"width": largura, "height": altura})
+            ctx = nav.new_context(viewport={"width": largura or config.LARG, "height": altura or config.ALT})
             if zoom_css != 1.0:
                 ctx.add_init_script(zoom_script(zoom_css))
             yield ctx.new_page()

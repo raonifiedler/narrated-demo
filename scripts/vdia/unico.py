@@ -66,6 +66,8 @@ class Parte(BaseModel):
     visual: Visual = "ondas"
     entra: str = "fade"  # xfade da abertura para a parte
     sai: str = "fadeblack"  # xfade do fim da parte para a próxima abertura (ou o fecho)
+    kicker: str = ""  # linha pequena acima do nome (ex.: "Capítulo 3")
+    chips: list[str] = Field(default_factory=lambda: [])  # etiquetas abaixo do título (ex.: comandos do capítulo)
 
 
 class Unico(BaseModel):
@@ -81,6 +83,9 @@ class Unico(BaseModel):
     transicao_cartela_q: int = Field(default=24, ge=6, le=60)
     ajuste_max_s: float = Field(default=0.5, ge=0.0, le=2.0)
     fundo_sonoro: bool = True
+    # > 0: o nome da parte aparece logo depois da transição e a voz só o fala depois desse tempo
+    # (transição -> texto na tela -> pausa -> fala). 0 = nome e fala juntos (comportamento antigo).
+    nome_antes_s: float = Field(default=0.0, ge=0.0, le=4.0)
 
 
 MODELO = Unico(
@@ -156,6 +161,7 @@ class Cena:
 def _chave(c: Cena) -> str:
     h = hashlib.sha256(HTML.read_bytes())
     h.update(json.dumps(c.params, sort_keys=True, ensure_ascii=False).encode())
+    h.update(f"{config.LARG}x{config.ALT}".encode())  # o formato do quadro também invalida a cena gravada
     h.update(str(c.quadros).encode())
     return h.hexdigest()[:16]
 
@@ -242,7 +248,8 @@ def _gravar_cenas(cenas: list[Cena], pasta: Path, forcar: bool) -> list[str]:
             ctx = nav.new_context(viewport={"width": config.LARG, "height": config.ALT})
             for c in pendentes:
                 pg = ctx.new_page()  # página nova por cena: trocar só o hash não recarrega o documento
-                pg.goto(f"{HTML.as_uri()}#{quote(json.dumps(c.params, ensure_ascii=False))}")
+                params = c.params | {"w": config.LARG, "h": config.ALT}
+                pg.goto(f"{HTML.as_uri()}#{quote(json.dumps(params, ensure_ascii=False))}")
                 pg.wait_for_function("window.__pronto === true")
                 pg.mouse.move(config.LARG - 1, config.ALT - 1)
                 bruto = tmp / f"{c.nome}.webm"
@@ -391,6 +398,8 @@ def montar(pasta: Path, forcar: bool = False) -> ResultadoUnico:
         t_in = tc if k == 0 else tq
         pausa_q = round(cfg.pausa_s * FPS)
         pre = t_in + 12 if k == 0 else max(t_in, pausa_q - (tail_q[k - 1] - t_in))
+        if cfg.nome_antes_s > 0:
+            pre = max(pre, t_in + round(cfg.nome_antes_s * FPS))
         pos = max(tq, pausa_q - (lead_q[k] - tq))
         fala_q = -(-am // AQ)
         q = pre + fala_q + pos
@@ -403,6 +412,9 @@ def montar(pasta: Path, forcar: bool = False) -> ResultadoUnico:
                     "total": len(cfg.partes),
                     "nome": p.nome,
                     "titulo": p.titulo,
+                    "kicker": p.kicker,
+                    "chips": p.chips,
+                    "fn": (t_in / FPS + 0.15) if cfg.nome_antes_s > 0 else None,
                     "marca": cfg.marca,
                     "tema": tema,
                     "fi": pre / FPS,

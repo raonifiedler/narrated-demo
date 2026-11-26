@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import html
 import io
 import json
@@ -161,9 +162,15 @@ class Sugestao(BaseModel):
     opcoes: list[str]
 
 
-def _nome_seguro(palavra: str) -> str:
+def nome_seguro(palavra: str) -> str:
+    """Nome de arquivo da sugestão. Quando a limpeza muda a palavra (símbolo, barra, acento), soma um
+    resumo da palavra original: sem isso, "%", "&" e "#" viravam todos "palavra", e "\\BEL" e "\\BEL+"
+    viravam "BEL", e uma sugestão sobrescrevia a outra."""
     s = unicodedata.normalize("NFKD", palavra).encode("ascii", "ignore").decode()
-    return re.sub(r"[^A-Za-z0-9._-]+", "_", s).strip("_") or "palavra"
+    limpo = re.sub(r"[^A-Za-z0-9._-]+", "_", s).strip("_") or "palavra"
+    if limpo == palavra:
+        return limpo
+    return f"{limpo}-{hashlib.sha1(palavra.encode('utf-8')).hexdigest()[:6]}"
 
 
 def pasta_sugestoes() -> Path:
@@ -186,7 +193,7 @@ def sugerir(palavra: str, frase: str | None, opcoes: list[str] | None, voz_id: s
     dic.pop(palavra, None)  # a palavra em teste nunca passa pelo dicionário
     pasta = pasta_sugestoes()
     pasta.mkdir(parents=True, exist_ok=True)
-    nome = _nome_seguro(palavra)
+    nome = nome_seguro(palavra)
     destino = pasta / f"{nome}.wav"
     linhas: list[str] = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -220,7 +227,7 @@ class Escolha:
 
 def escolher(palavra: str, numero: int, variantes_caixa: bool = False) -> Escolha:
     pasta = pasta_sugestoes()
-    nome = _nome_seguro(palavra)
+    nome = nome_seguro(palavra)
     arq = pasta / f"{nome}.json"
     if not arq.exists():
         raise ErroFonetica(f"sem sugestão para '{palavra}' em {pasta}; rode antes `vdia fonetica sugerir`")
@@ -249,8 +256,11 @@ def faltantes(textos: list[str], dic: dict[str, str] | None = None) -> list[str]
     """Siglas (2+ maiúsculas), CamelCase, números com letras e nomes de grafia estrangeira sem entrada."""
     dic = dic if dic is not None else pronuncia.ler()
     achadas: list[str] = []
+    # o que um termo do dicionário já cobre sai antes de procurar: "\BEL+" cobre "BEL+", "SIGN/imagens"
+    # cobre "SIGN", "width=0.8\linewidth" cobre "0.8" (sem isso, pedaços de termo composto viravam faltantes)
+    cobre = {k: " " for k in dic}
     for t in textos:
-        for m in _TOKEN.finditer(t):
+        for m in _TOKEN.finditer(pronuncia.aplicar(t, cobre)):
             w = m.group(0).rstrip(".")
             if w in dic or w in achadas or w.lower() in COMUNS:
                 continue

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 import soundfile as sf
 from pydantic import BaseModel, ConfigDict
 
@@ -88,8 +89,39 @@ def _sintetizar_piper(v: EntradaVoz, texto: str, destino: Path, escala: float) -
     carregada = _CACHE.piper.get(v.id)
     voz = carregada if isinstance(carregada, PiperVoice) else PiperVoice.load(str(modelo))
     _CACHE.piper[v.id] = voz
+    # O Piper fala frase a frase, e cada frase traz silêncio nas pontas, esticado pelo length_scale: com a
+    # escala da calibração (~1,6) a pausa entre frases passava de 0,8 s e reprovava o QA de pausas. As pontas
+    # de cada frase são aparadas e as frases unidas por uma pausa fixa (PAUSA_FRASE_S), igual em qualquer escala.
+    partes: list[bytes] = []
+    taxa, largura, canais = 22050, 2, 1
+    for pedaco in voz.synthesize(texto, syn_config=SynthesisConfig(length_scale=escala)):
+        taxa, largura, canais = pedaco.sample_rate, pedaco.sample_width, pedaco.sample_channels
+        partes.append(_aparar_silencio(pedaco.audio_int16_bytes, canais, taxa))
+    pausa = b"\x00" * (int(taxa * PAUSA_FRASE_S) * largura * canais)
     with wave.open(str(destino), "wb") as w:
-        voz.synthesize_wav(texto, w, syn_config=SynthesisConfig(length_scale=escala))
+        w.setframerate(taxa)
+        w.setsampwidth(largura)
+        w.setnchannels(canais)
+        w.writeframes(pausa.join(partes))
+
+
+PAUSA_FRASE_S = 0.35
+LIMIAR_SILENCIO = 350  # amplitude int16 abaixo da qual a amostra conta como silêncio
+MARGEM_S = 0.04  # sobra de cada ponta, para não cortar o ataque nem o fim da palavra
+
+
+def _aparar_silencio(pcm: bytes, canais: int, taxa: int = 22050) -> bytes:
+    a = np.frombuffer(pcm, dtype=np.int16)
+    if a.size == 0:
+        return pcm
+    som = np.flatnonzero(np.abs(a) > LIMIAR_SILENCIO)
+    if som.size == 0:
+        return b""
+    folga = int(taxa * MARGEM_S) * canais
+    ini = max(int(som[0]) - folga, 0)
+    fim = min(int(som[-1]) + folga + 1, a.size)
+    ini -= ini % canais
+    return a[ini:fim].tobytes()
 
 
 def _sintetizar_kokoro(v: EntradaVoz, texto: str, destino: Path, escala: float) -> None:

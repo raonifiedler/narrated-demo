@@ -5,7 +5,7 @@ Regras da troca (aplicada em TODA síntese; a legenda usa sempre o texto escrito
 - o termo mais longo primeiro ("Node.js" antes de "Node");
 - sensível a maiúsculas: "Web" e "web" são entradas diferentes. As variantes de caixa são opcionais
   (`vdia fonetica escolher ... --variantes-caixa` grava minúscula, Título e MAIÚSCULA de uma vez).
-- chaves que começam com "_" são comentários e são ignoradas.
+- chaves "_" + letra ("_leia") são comentários e são ignoradas; o símbolo "_" sozinho é termo.
 """
 
 from __future__ import annotations
@@ -19,12 +19,18 @@ from vdia import config
 _LETRA = r"\wÀ-ÿ"
 
 
+def eh_comentario(chave: str) -> bool:
+    """Comentário = "_" seguido de letra ("_leia", "_exemplo"). O símbolo "_" sozinho (ou "__") é termo de
+    verdade: um roteiro que fala do sublinhado precisa poder ter a pronúncia dele no dicionário."""
+    return len(chave) > 1 and chave[0] == "_" and chave[1].isalpha()
+
+
 def ler(arq: Path | None = None) -> dict[str, str]:
     p = arq or config.dicionario_path()
     bruto = config.ler_json_objeto(p)
     saida: dict[str, str] = {}
     for k, v in bruto.items():
-        if k.startswith("_"):
+        if eh_comentario(k):
             continue
         if not isinstance(v, str):
             raise config.ErroConfig(f"{p}: a entrada '{k}' precisa ser texto (veio {type(v).__name__})")

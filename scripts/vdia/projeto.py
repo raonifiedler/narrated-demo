@@ -27,7 +27,13 @@ class ErroProjeto(RuntimeError):
     """Nome inválido, projeto existente ou clipe faltando."""
 
 
-def novo(nome: str, titulo: str | None = None, rota: str = "web") -> Path:
+ESTILO_RETRATO = (
+    "FontName=Arial,FontSize=9,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+    "BackColour=&H99000000,BorderStyle=4,Outline=1,Shadow=0,MarginV=34,MarginL=14,MarginR=14"
+)
+
+
+def novo(nome: str, titulo: str | None = None, rota: str = "web", formato: str = "paisagem") -> Path:
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", nome):
         raise ErroProjeto("nome: minúsculas, números e hífen (ex.: app-tarefas)")
     pasta = config.area() / nome
@@ -36,7 +42,10 @@ def novo(nome: str, titulo: str | None = None, rota: str = "web") -> Path:
     for sub in config.PASTAS_PROJETO:
         (pasta / sub).mkdir(parents=True, exist_ok=True)
     t = titulo or nome.replace("-", " ").capitalize()
-    proj = config.Projeto(nome=nome, titulo=t, gravacao=config.Gravacao.model_validate({"rota": rota}))
+    dados: dict[str, object] = {"nome": nome, "titulo": t, "formato": formato, "gravacao": {"rota": rota}}
+    if formato == "retrato":  # celular em pé: letra menor e mais acima, para caber em duas linhas sem cobrir a tela
+        dados["legenda"] = {"estilo": ESTILO_RETRATO}
+    proj = config.Projeto.model_validate(dados)
     config.salvar_projeto(pasta, proj)
     (pasta / "roteiro" / "ROTEIRO.md").write_text(roteiro.MODELO.format(titulo=t), encoding="utf-8")
     shutil.copyfile(config.ASSETS / "modelo_gravar_web.py", pasta / "scripts" / "gravar.py")
